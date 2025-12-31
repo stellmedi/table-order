@@ -90,6 +90,7 @@
       display: flex;
       flex-direction: column;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
     }
     .tf-widget-modal.open {
       right: 0;
@@ -120,6 +121,7 @@
       flex: 1;
       overflow-y: auto;
       padding: 20px;
+      min-height: 0;
     }
     .tf-widget-loading {
       text-align: center;
@@ -141,6 +143,7 @@
       align-items: center;
       padding: 12px 0;
       border-bottom: 1px solid #eee;
+      word-break: break-word;
     }
     .tf-widget-item-info {
       flex: 1;
@@ -201,6 +204,7 @@
       padding: 20px;
       background: #f8f8f8;
       border-top: 1px solid #eee;
+      flex-shrink: 0;
     }
     .tf-widget-coupon {
       display: flex;
