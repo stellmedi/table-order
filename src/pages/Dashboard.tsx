@@ -26,10 +26,12 @@ import {
   ShoppingCart,
   ExternalLink,
   Loader2,
-  TrendingUp
+  TrendingUp,
+  Code
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Restaurant } from '@/types/database';
+import { EmbedCodeModal } from '@/components/EmbedCodeModal';
 
 function RestaurantStats({ restaurant }: { restaurant: Restaurant }) {
   const { data: orders } = useOrders(restaurant.id);
@@ -89,6 +91,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   
   const [showCreate, setShowCreate] = useState(false);
+  const [showEmbed, setShowEmbed] = useState(false);
   const [newName, setNewName] = useState('');
   const [newSlug, setNewSlug] = useState('');
 
@@ -195,7 +198,7 @@ export default function Dashboard() {
 
             <div>
               <h2 className="mb-4 text-xl font-semibold">Quick Actions</h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <Link to="/dashboard/menu">
                   <Card className="card-hover cursor-pointer h-full">
                     <CardHeader>
@@ -240,6 +243,18 @@ export default function Dashboard() {
                     </CardHeader>
                   </Card>
                 </Link>
+                <Card 
+                  className="card-hover cursor-pointer h-full border-dashed"
+                  onClick={() => setShowEmbed(true)}
+                >
+                  <CardHeader>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent mb-2">
+                      <Code className="h-6 w-6" />
+                    </div>
+                    <CardTitle className="text-lg">Embed Widget</CardTitle>
+                    <CardDescription>Add ordering to your site</CardDescription>
+                  </CardHeader>
+                </Card>
               </div>
             </div>
 
@@ -296,6 +311,15 @@ export default function Dashboard() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {restaurant && (
+          <EmbedCodeModal
+            open={showEmbed}
+            onOpenChange={setShowEmbed}
+            restaurantSlug={restaurant.slug}
+            restaurantName={restaurant.name}
+          />
+        )}
       </div>
     </DashboardLayout>
   );

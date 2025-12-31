@@ -1,1 +1,7 @@
 project_id = "hannairmzwhlurkwydph"
+
+[functions.public-restaurant]
+verify_jwt = false
+
+[functions.public-order]
+verify_jwt = false
