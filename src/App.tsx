@@ -16,6 +16,7 @@ import BookingsManagement from "./pages/BookingsManagement";
 import POS from "./pages/POS";
 import CustomerOrder from "./pages/CustomerOrder";
 import CustomerBookTable from "./pages/CustomerBookTable";
+import WidgetTest from "./pages/WidgetTest";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/pos" element={<POS />} />
             <Route path="/r/:slug" element={<CustomerOrder />} />
             <Route path="/r/:slug/book-table" element={<CustomerBookTable />} />
+            <Route path="/widget-test" element={<WidgetTest />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

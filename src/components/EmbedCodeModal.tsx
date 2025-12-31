@@ -186,12 +186,22 @@ export function EmbedCodeModal({
             </ol>
           </div>
 
-          {/* Test Link */}
-          <div className="flex justify-end">
+          {/* Test Links */}
+          <div className="flex justify-end gap-3">
             <Button variant="outline" asChild className="gap-2">
               <a href={`/r/${restaurantSlug}`} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-4 w-4" />
-                Test Your Menu Page
+                View Menu Page
+              </a>
+            </Button>
+            <Button asChild className="gap-2">
+              <a 
+                href={`/widget-test?slug=${restaurantSlug}&color=${encodeURIComponent(buttonColor)}&position=${buttonPosition}&text=${encodeURIComponent(buttonText)}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Test Widget
               </a>
             </Button>
           </div>
