@@ -80,8 +80,7 @@ serve(async (req) => {
       return {
         menu_item_id: item.menu_item_id,
         quantity: item.quantity,
-        unit_price: menuItem.price,
-        subtotal: itemTotal
+        price: Number(menuItem.price)
       };
     });
 
@@ -93,8 +92,9 @@ serve(async (req) => {
         .from('discounts')
         .select('*')
         .eq('restaurant_id', restaurant_id)
-        .eq('code', coupon_code.toUpperCase())
+        .eq('coupon_code', coupon_code.toUpperCase())
         .eq('is_active', true)
+        .eq('type', 'coupon')
         .maybeSingle();
 
       if (discountData) {
@@ -115,10 +115,9 @@ serve(async (req) => {
       .insert({
         restaurant_id,
         status: 'new',
-        subtotal,
-        discount,
         total,
-        source
+        discount_applied: discount,
+        coupon_code: coupon_code || null
       })
       .select()
       .single();
