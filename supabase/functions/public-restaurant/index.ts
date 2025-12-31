@@ -58,8 +58,8 @@ serve(async (req) => {
     const { data: menus, error: menusError } = await supabase
       .from('menus')
       .select(`
-        id, name, description, is_active,
-        menu_items (id, name, description, price, image_url, is_available)
+        id, name, is_active,
+        menu_items (id, name, price, is_available)
       `)
       .eq('restaurant_id', restaurant.id)
       .eq('is_active', true);
@@ -78,12 +78,13 @@ serve(async (req) => {
       menu_items: menu.menu_items?.filter((item: any) => item.is_available) || []
     })) || [];
 
-    // Fetch active discounts
+    // Fetch active coupon discounts
     const { data: discounts, error: discountsError } = await supabase
       .from('discounts')
-      .select('id, name, code, type, value_type, value, is_active')
+      .select('id, coupon_code, type, value_type, value, is_active')
       .eq('restaurant_id', restaurant.id)
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('type', 'coupon');
 
     if (discountsError) {
       console.error('Error fetching discounts:', discountsError);

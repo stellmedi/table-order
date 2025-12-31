@@ -403,7 +403,7 @@
 
   function calculateDiscount(subtotal) {
     if (!couponCode) return 0;
-    const discount = discounts.find(d => d.code === couponCode.toUpperCase());
+    const discount = discounts.find(d => d.coupon_code === couponCode.toUpperCase());
     if (!discount) return 0;
     appliedDiscount = discount;
     if (discount.value_type === 'percentage') {
