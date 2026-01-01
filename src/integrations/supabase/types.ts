@@ -193,6 +193,7 @@ export type Database = {
           is_active: boolean
           name: string
           restaurant_id: string
+          tax_rate: number | null
         }
         Insert: {
           created_at?: string
@@ -200,6 +201,7 @@ export type Database = {
           is_active?: boolean
           name: string
           restaurant_id: string
+          tax_rate?: number | null
         }
         Update: {
           created_at?: string
@@ -207,6 +209,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           restaurant_id?: string
+          tax_rate?: number | null
         }
         Relationships: [
           {
