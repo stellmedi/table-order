@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/Layout';
 import { useRestaurants, useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu, useMenuItems, useCreateMenuItem, useUpdateMenuItem, useDeleteMenuItem } from '@/hooks/useRestaurant';
+import { useVariations, useAddons } from '@/hooks/useMenuItemOptions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,9 +22,35 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Plus, Pencil, Trash2, Loader2, Menu as MenuIcon, UtensilsCrossed } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Menu as MenuIcon, UtensilsCrossed, Settings2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { MenuItemOptionsEditor } from '@/components/MenuItemOptionsEditor';
 import type { Menu, MenuItem } from '@/types/database';
+
+function MenuItemOptionsBadges({ menuItemId }: { menuItemId: string }) {
+  const { data: variations } = useVariations(menuItemId);
+  const { data: addons } = useAddons(menuItemId);
+  
+  const variationCount = variations?.length || 0;
+  const addonCount = addons?.length || 0;
+  
+  if (variationCount === 0 && addonCount === 0) return null;
+  
+  return (
+    <div className="flex gap-1 mt-1">
+      {variationCount > 0 && (
+        <Badge variant="outline" className="text-xs">
+          {variationCount} variation{variationCount !== 1 ? 's' : ''}
+        </Badge>
+      )}
+      {addonCount > 0 && (
+        <Badge variant="outline" className="text-xs">
+          {addonCount} add-on{addonCount !== 1 ? 's' : ''}
+        </Badge>
+      )}
+    </div>
+  );
+}
 
 function MenuItemList({ menuId, restaurantId }: { menuId: string; restaurantId: string }) {
   const { data: items, isLoading } = useMenuItems(menuId);
@@ -34,6 +61,7 @@ function MenuItemList({ menuId, restaurantId }: { menuId: string; restaurantId: 
 
   const [showAdd, setShowAdd] = useState(false);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
+  const [optionsItem, setOptionsItem] = useState<MenuItem | null>(null);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
 
@@ -104,18 +132,32 @@ function MenuItemList({ menuId, restaurantId }: { menuId: string; restaurantId: 
           <div key={item.id} className="flex items-center justify-between rounded-lg border border-border bg-background p-4">
             <div className="flex items-center gap-4">
               <div>
-                <p className="font-medium">{item.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">{item.name}</p>
+                  {!item.is_available && (
+                    <Badge variant="secondary" className="text-xs">Out of Stock</Badge>
+                  )}
+                </div>
                 <p className="text-sm text-primary font-semibold">${Number(item.price).toFixed(2)}</p>
+                <MenuItemOptionsBadges menuItemId={item.id} />
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mr-2">
                 <span className="text-sm text-muted-foreground">Available</span>
                 <Switch
                   checked={item.is_available}
                   onCheckedChange={() => handleToggleAvailable(item)}
                 />
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setOptionsItem(item)}
+                title="Manage variations & add-ons"
+              >
+                <Settings2 className="h-4 w-4" />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
@@ -193,6 +235,14 @@ function MenuItemList({ menuId, restaurantId }: { menuId: string; restaurantId: 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {optionsItem && (
+        <MenuItemOptionsEditor
+          item={optionsItem}
+          open={!!optionsItem}
+          onOpenChange={(open) => !open && setOptionsItem(null)}
+        />
+      )}
     </div>
   );
 }
@@ -282,7 +332,7 @@ export default function MenuManagement() {
               <MenuIcon className="h-8 w-8 text-primary" />
               <h1 className="text-3xl font-bold">Menu Management</h1>
             </div>
-            <p className="text-muted-foreground">Create menus and add items for customers to order</p>
+            <p className="text-muted-foreground">Create menus and add items with variations and add-ons</p>
           </div>
           <Button onClick={() => setShowCreate(true)} className="gap-2">
             <Plus className="h-4 w-4" />

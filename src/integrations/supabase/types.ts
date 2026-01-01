@@ -75,6 +75,82 @@ export type Database = {
           },
         ]
       }
+      menu_item_addons: {
+        Row: {
+          created_at: string
+          id: string
+          is_available: boolean
+          menu_item_id: string
+          name: string
+          price: number
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          menu_item_id: string
+          name: string
+          price?: number
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          menu_item_id?: string
+          name?: string
+          price?: number
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_addons_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_item_variations: {
+        Row: {
+          created_at: string
+          id: string
+          is_available: boolean
+          menu_item_id: string
+          name: string
+          price_adjustment: number
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          menu_item_id: string
+          name: string
+          price_adjustment?: number
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_available?: boolean
+          menu_item_id?: string
+          name?: string
+          price_adjustment?: number
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_variations_menu_item_id_fkey"
+            columns: ["menu_item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_items: {
         Row: {
           created_at: string
@@ -138,6 +214,93 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_item_addons: {
+        Row: {
+          addon_id: string
+          addon_name: string
+          created_at: string
+          id: string
+          order_item_id: string
+          price: number
+          quantity: number
+        }
+        Insert: {
+          addon_id: string
+          addon_name: string
+          created_at?: string
+          id?: string
+          order_item_id: string
+          price?: number
+          quantity?: number
+        }
+        Update: {
+          addon_id?: string
+          addon_name?: string
+          created_at?: string
+          id?: string
+          order_item_id?: string
+          price?: number
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_addons_addon_id_fkey"
+            columns: ["addon_id"]
+            isOneToOne: false
+            referencedRelation: "menu_item_addons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_addons_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_item_variations: {
+        Row: {
+          created_at: string
+          id: string
+          order_item_id: string
+          price_adjustment: number
+          variation_id: string
+          variation_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_item_id: string
+          price_adjustment?: number
+          variation_id: string
+          variation_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_item_id?: string
+          price_adjustment?: number
+          variation_id?: string
+          variation_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_item_variations_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_item_variations_variation_id_fkey"
+            columns: ["variation_id"]
+            isOneToOne: false
+            referencedRelation: "menu_item_variations"
             referencedColumns: ["id"]
           },
         ]
