@@ -22,9 +22,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Plus, Pencil, Trash2, Loader2, Menu as MenuIcon, UtensilsCrossed, Settings2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Loader2, Menu as MenuIcon, UtensilsCrossed, Settings2, Percent } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MenuItemOptionsEditor } from '@/components/MenuItemOptionsEditor';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import type { Menu, MenuItem } from '@/types/database';
 
 function MenuItemOptionsBadges({ menuItemId }: { menuItemId: string }) {
@@ -259,6 +260,7 @@ export default function MenuManagement() {
   const [showCreate, setShowCreate] = useState(false);
   const [editMenu, setEditMenu] = useState<Menu | null>(null);
   const [menuName, setMenuName] = useState('');
+  const [menuTaxRate, setMenuTaxRate] = useState('');
 
   const handleCreate = async () => {
     if (!restaurant || !menuName.trim()) return;
@@ -266,10 +268,12 @@ export default function MenuManagement() {
       await createMenu.mutateAsync({
         restaurant_id: restaurant.id,
         name: menuName.trim(),
+        tax_rate: menuTaxRate ? parseFloat(menuTaxRate) : undefined,
       });
       toast({ title: 'Menu created' });
       setShowCreate(false);
       setMenuName('');
+      setMenuTaxRate('');
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -282,9 +286,11 @@ export default function MenuManagement() {
         id: editMenu.id,
         restaurant_id: restaurant.id,
         name: menuName.trim(),
+        tax_rate: menuTaxRate ? parseFloat(menuTaxRate) : 0,
       });
       toast({ title: 'Menu updated' });
       setEditMenu(null);
+      setMenuTaxRate('');
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -366,6 +372,21 @@ export default function MenuManagement() {
                     <Badge variant={menu.is_active ? 'default' : 'secondary'}>
                       {menu.is_active ? 'Active' : 'Inactive'}
                     </Badge>
+                    {menu.tax_rate && menu.tax_rate > 0 && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="outline" className="gap-1">
+                              <Percent className="h-3 w-3" />
+                              {menu.tax_rate}%
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Tax rate applied to items in this category</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="pt-4">
@@ -383,6 +404,7 @@ export default function MenuManagement() {
                       onClick={() => {
                         setEditMenu(menu);
                         setMenuName(menu.name);
+                        setMenuTaxRate(menu.tax_rate?.toString() || '');
                       }}
                     >
                       <Pencil className="h-4 w-4 mr-1" />
@@ -410,14 +432,30 @@ export default function MenuManagement() {
               <DialogTitle>Create New Menu</DialogTitle>
               <DialogDescription>Add a new menu category for your restaurant</DialogDescription>
             </DialogHeader>
-            <div className="py-4">
-              <Label>Menu Name</Label>
-              <Input
-                value={menuName}
-                onChange={(e) => setMenuName(e.target.value)}
-                placeholder="e.g., Lunch Menu, Dinner Specials"
-                className="mt-2"
-              />
+            <div className="py-4 space-y-4">
+              <div>
+                <Label>Menu Name</Label>
+                <Input
+                  value={menuName}
+                  onChange={(e) => setMenuName(e.target.value)}
+                  placeholder="e.g., Lunch Menu, Dinner Specials"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label>Tax Rate (%)</Label>
+                <p className="text-sm text-muted-foreground mb-2">Tax applied to all items in this category</p>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={menuTaxRate}
+                  onChange={(e) => setMenuTaxRate(e.target.value)}
+                  placeholder="0"
+                  className="w-32"
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
@@ -434,13 +472,29 @@ export default function MenuManagement() {
             <DialogHeader>
               <DialogTitle>Edit Menu</DialogTitle>
             </DialogHeader>
-            <div className="py-4">
-              <Label>Menu Name</Label>
-              <Input
-                value={menuName}
-                onChange={(e) => setMenuName(e.target.value)}
-                className="mt-2"
-              />
+            <div className="py-4 space-y-4">
+              <div>
+                <Label>Menu Name</Label>
+                <Input
+                  value={menuName}
+                  onChange={(e) => setMenuName(e.target.value)}
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label>Tax Rate (%)</Label>
+                <p className="text-sm text-muted-foreground mb-2">Tax applied to all items in this category</p>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={menuTaxRate}
+                  onChange={(e) => setMenuTaxRate(e.target.value)}
+                  placeholder="0"
+                  className="w-32"
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditMenu(null)}>Cancel</Button>

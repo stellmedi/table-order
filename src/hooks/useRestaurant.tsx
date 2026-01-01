@@ -120,7 +120,7 @@ export function useCreateMenu() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: { restaurant_id: string; name: string }) => {
+    mutationFn: async (data: { restaurant_id: string; name: string; tax_rate?: number }) => {
       const { data: menu, error } = await supabase
         .from('menus')
         .insert(data)
