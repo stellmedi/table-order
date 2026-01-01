@@ -14,6 +14,7 @@ import DiscountsManagement from "./pages/DiscountsManagement";
 import TablesManagement from "./pages/TablesManagement";
 import BookingsManagement from "./pages/BookingsManagement";
 import POS from "./pages/POS";
+import StoreSettings from "./pages/StoreSettings";
 import CustomerOrder from "./pages/CustomerOrder";
 import CustomerBookTable from "./pages/CustomerBookTable";
 import WidgetTest from "./pages/WidgetTest";
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/dashboard/tables" element={<TablesManagement />} />
             <Route path="/dashboard/bookings" element={<BookingsManagement />} />
             <Route path="/pos" element={<POS />} />
+            <Route path="/dashboard/settings" element={<StoreSettings />} />
             <Route path="/r/:slug" element={<CustomerOrder />} />
             <Route path="/r/:slug/book-table" element={<CustomerBookTable />} />
             <Route path="/widget-test" element={<WidgetTest />} />

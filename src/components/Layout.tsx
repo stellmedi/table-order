@@ -10,7 +10,8 @@ import {
   ShoppingCart,
   LogOut,
   ChefHat,
-  Shield
+  Shield,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,7 +25,8 @@ const ownerNavItems = [
   { href: '/dashboard/discounts', label: 'Discounts', icon: Percent },
   { href: '/dashboard/tables', label: 'Tables', icon: Grid3X3 },
   { href: '/dashboard/bookings', label: 'Bookings', icon: CalendarDays },
-  { href: '/pos', label: 'POS', icon: ShoppingCart },
+  { href: '/pos', label: 'Live Orders', icon: ShoppingCart },
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
 export function DashboardLayout({ children }: LayoutProps) {

@@ -483,7 +483,15 @@ export function useOrders(restaurantId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
-        .select('*, order_items(*, menu_item:menu_items(*))')
+        .select(`
+          *, 
+          order_items(
+            *, 
+            menu_item:menu_items(*),
+            variations:order_item_variations(*),
+            addons:order_item_addons(*)
+          )
+        `)
         .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false });
       if (error) throw error;

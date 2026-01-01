@@ -3,7 +3,45 @@ export type PlanType = 'starter' | 'growth' | 'pro';
 export type DiscountType = 'menu' | 'item' | 'coupon';
 export type DiscountValueType = 'percentage' | 'flat';
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled';
-export type OrderStatus = 'new' | 'accepted' | 'completed';
+export type OrderStatus = 'new' | 'accepted' | 'ready' | 'completed';
+
+export interface DayHours {
+  open: string;
+  close: string;
+  is_open: boolean;
+}
+
+export interface OpeningHours {
+  monday: DayHours;
+  tuesday: DayHours;
+  wednesday: DayHours;
+  thursday: DayHours;
+  friday: DayHours;
+  saturday: DayHours;
+  sunday: DayHours;
+}
+
+export interface DeliveryZone {
+  name: string;
+  fee: number;
+  min_order: number;
+}
+
+export interface RestaurantSettings {
+  id: string;
+  restaurant_id: string;
+  opening_hours: OpeningHours;
+  pickup_enabled: boolean;
+  delivery_enabled: boolean;
+  minimum_order_value: number;
+  delivery_charge: number;
+  delivery_zones: DeliveryZone[];
+  preparation_time_minutes: number;
+  tax_included_in_price: boolean;
+  tax_rate: number;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface Profile {
   id: string;
@@ -108,6 +146,8 @@ export interface Order {
   total: number;
   coupon_code: string | null;
   discount_applied: number;
+  estimated_ready_at: string | null;
+  customer_notified: boolean;
   created_at: string;
   order_items?: OrderItem[];
 }
