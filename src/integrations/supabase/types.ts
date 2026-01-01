@@ -351,7 +351,9 @@ export type Database = {
         Row: {
           coupon_code: string | null
           created_at: string
+          customer_notified: boolean | null
           discount_applied: number | null
+          estimated_ready_at: string | null
           id: string
           restaurant_id: string
           status: Database["public"]["Enums"]["order_status"]
@@ -360,7 +362,9 @@ export type Database = {
         Insert: {
           coupon_code?: string | null
           created_at?: string
+          customer_notified?: boolean | null
           discount_applied?: number | null
+          estimated_ready_at?: string | null
           id?: string
           restaurant_id: string
           status?: Database["public"]["Enums"]["order_status"]
@@ -369,7 +373,9 @@ export type Database = {
         Update: {
           coupon_code?: string | null
           created_at?: string
+          customer_notified?: boolean | null
           discount_applied?: number | null
+          estimated_ready_at?: string | null
           id?: string
           restaurant_id?: string
           status?: Database["public"]["Enums"]["order_status"]
@@ -402,6 +408,62 @@ export type Database = {
           id?: string
         }
         Relationships: []
+      }
+      restaurant_settings: {
+        Row: {
+          created_at: string | null
+          delivery_charge: number | null
+          delivery_enabled: boolean | null
+          delivery_zones: Json | null
+          id: string
+          minimum_order_value: number | null
+          opening_hours: Json | null
+          pickup_enabled: boolean | null
+          preparation_time_minutes: number | null
+          restaurant_id: string
+          tax_included_in_price: boolean | null
+          tax_rate: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivery_charge?: number | null
+          delivery_enabled?: boolean | null
+          delivery_zones?: Json | null
+          id?: string
+          minimum_order_value?: number | null
+          opening_hours?: Json | null
+          pickup_enabled?: boolean | null
+          preparation_time_minutes?: number | null
+          restaurant_id: string
+          tax_included_in_price?: boolean | null
+          tax_rate?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivery_charge?: number | null
+          delivery_enabled?: boolean | null
+          delivery_zones?: Json | null
+          id?: string
+          minimum_order_value?: number | null
+          opening_hours?: Json | null
+          pickup_enabled?: boolean | null
+          preparation_time_minutes?: number | null
+          restaurant_id?: string
+          tax_included_in_price?: boolean | null
+          tax_rate?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_settings_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       restaurants: {
         Row: {
@@ -559,7 +621,7 @@ export type Database = {
       booking_status: "pending" | "confirmed" | "cancelled"
       discount_type: "menu" | "item" | "coupon"
       discount_value_type: "percentage" | "flat"
-      order_status: "new" | "accepted" | "completed"
+      order_status: "new" | "accepted" | "ready" | "completed"
       plan_type: "starter" | "growth" | "pro"
     }
     CompositeTypes: {
@@ -692,7 +754,7 @@ export const Constants = {
       booking_status: ["pending", "confirmed", "cancelled"],
       discount_type: ["menu", "item", "coupon"],
       discount_value_type: ["percentage", "flat"],
-      order_status: ["new", "accepted", "completed"],
+      order_status: ["new", "accepted", "ready", "completed"],
       plan_type: ["starter", "growth", "pro"],
     },
   },
