@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Clock, Truck, Calculator, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Clock, Truck, Calculator } from 'lucide-react';
+import { DeliveryZoneMap } from '@/components/DeliveryZoneMap';
 import type { OpeningHours, DayHours, DeliveryZone } from '@/types/database';
 
 const DAYS: (keyof OpeningHours)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -61,22 +62,6 @@ export default function StoreSettings() {
       ...prev,
       [day]: { ...prev[day], [field]: value }
     }));
-  };
-
-  const addDeliveryZone = () => {
-    setDeliveryZones(prev => [...prev, { name: '', fee: 0, min_order: 0 }]);
-  };
-
-  const updateDeliveryZone = (index: number, field: keyof DeliveryZone, value: string | number) => {
-    setDeliveryZones(prev => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
-  };
-
-  const removeDeliveryZone = (index: number) => {
-    setDeliveryZones(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSave = async () => {
@@ -238,64 +223,15 @@ export default function StoreSettings() {
             <Separator />
 
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <Label>Delivery Zones</Label>
-                  <p className="text-sm text-muted-foreground">Set different fees for delivery areas</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={addDeliveryZone}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Zone
-                </Button>
+              <div className="mb-4">
+                <Label>Delivery Zones</Label>
+                <p className="text-sm text-muted-foreground">Draw delivery zones on the map to set different fees for areas</p>
               </div>
               
-              {deliveryZones.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No delivery zones configured. Default delivery charge will apply.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {deliveryZones.map((zone, index) => (
-                    <div key={index} className="flex items-center gap-3 flex-wrap">
-                      <Input
-                        placeholder="Zone name"
-                        value={zone.name}
-                        onChange={(e) => updateDeliveryZone(index, 'name', e.target.value)}
-                        className="flex-1 min-w-[120px]"
-                      />
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm text-muted-foreground">Fee $</span>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={zone.fee}
-                          onChange={(e) => updateDeliveryZone(index, 'fee', parseFloat(e.target.value) || 0)}
-                          className="w-20"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm text-muted-foreground">Min $</span>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={zone.min_order}
-                          onChange={(e) => updateDeliveryZone(index, 'min_order', parseFloat(e.target.value) || 0)}
-                          className="w-20"
-                        />
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => removeDeliveryZone(index)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <DeliveryZoneMap 
+                zones={deliveryZones} 
+                onZonesChange={setDeliveryZones} 
+              />
             </div>
           </CardContent>
         </Card>

@@ -25,6 +25,7 @@ export interface DeliveryZone {
   name: string;
   fee: number;
   min_order: number;
+  polygon?: [number, number][]; // Array of [lng, lat] coordinates
 }
 
 export interface RestaurantSettings {
@@ -70,6 +71,7 @@ export interface Menu {
   restaurant_id: string;
   name: string;
   is_active: boolean;
+  tax_rate?: number;
   created_at: string;
 }
 
