@@ -42,6 +42,28 @@ export interface MenuItem {
   price: number;
   is_available: boolean;
   created_at: string;
+  variations?: MenuItemVariation[];
+  addons?: MenuItemAddon[];
+}
+
+export interface MenuItemVariation {
+  id: string;
+  menu_item_id: string;
+  name: string;
+  price_adjustment: number;
+  is_available: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface MenuItemAddon {
+  id: string;
+  menu_item_id: string;
+  name: string;
+  price: number;
+  is_available: boolean;
+  sort_order: number;
+  created_at: string;
 }
 
 export interface Discount {
@@ -98,9 +120,32 @@ export interface OrderItem {
   price: number;
   created_at: string;
   menu_item?: MenuItem;
+  variations?: OrderItemVariation[];
+  addons?: OrderItemAddon[];
+}
+
+export interface OrderItemVariation {
+  id: string;
+  order_item_id: string;
+  variation_id: string;
+  variation_name: string;
+  price_adjustment: number;
+  created_at: string;
+}
+
+export interface OrderItemAddon {
+  id: string;
+  order_item_id: string;
+  addon_id: string;
+  addon_name: string;
+  price: number;
+  quantity: number;
+  created_at: string;
 }
 
 export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
+  selectedVariation?: MenuItemVariation;
+  selectedAddons?: { addon: MenuItemAddon; quantity: number }[];
 }

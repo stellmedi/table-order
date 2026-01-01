@@ -54,12 +54,14 @@ serve(async (req) => {
       );
     }
 
-    // Fetch menus with items
+    // Fetch menus with items, variations, and addons
     const { data: menus, error: menusError } = await supabase
       .from('menus')
       .select(`
         id, name, is_active,
-        menu_items (id, name, price, is_available)
+        menu_items (
+          id, name, price, is_available
+        )
       `)
       .eq('restaurant_id', restaurant.id)
       .eq('is_active', true);
@@ -72,10 +74,60 @@ serve(async (req) => {
       );
     }
 
-    // Filter to only available items
+    // Get all menu item IDs for fetching variations and addons
+    const menuItemIds: string[] = [];
+    menus?.forEach(menu => {
+      menu.menu_items?.forEach((item: any) => {
+        if (item.is_available) {
+          menuItemIds.push(item.id);
+        }
+      });
+    });
+
+    // Fetch variations for all menu items
+    const { data: variations } = await supabase
+      .from('menu_item_variations')
+      .select('id, menu_item_id, name, price_adjustment, is_available, sort_order')
+      .in('menu_item_id', menuItemIds)
+      .eq('is_available', true)
+      .order('sort_order', { ascending: true });
+
+    // Fetch addons for all menu items
+    const { data: addons } = await supabase
+      .from('menu_item_addons')
+      .select('id, menu_item_id, name, price, is_available, sort_order')
+      .in('menu_item_id', menuItemIds)
+      .eq('is_available', true)
+      .order('sort_order', { ascending: true });
+
+    // Create lookup maps
+    const variationsByItem = new Map<string, any[]>();
+    const addonsByItem = new Map<string, any[]>();
+
+    variations?.forEach(v => {
+      if (!variationsByItem.has(v.menu_item_id)) {
+        variationsByItem.set(v.menu_item_id, []);
+      }
+      variationsByItem.get(v.menu_item_id)!.push(v);
+    });
+
+    addons?.forEach(a => {
+      if (!addonsByItem.has(a.menu_item_id)) {
+        addonsByItem.set(a.menu_item_id, []);
+      }
+      addonsByItem.get(a.menu_item_id)!.push(a);
+    });
+
+    // Filter to only available items and attach variations/addons
     const menusWithItems = menus?.map(menu => ({
       ...menu,
-      menu_items: menu.menu_items?.filter((item: any) => item.is_available) || []
+      menu_items: menu.menu_items
+        ?.filter((item: any) => item.is_available)
+        .map((item: any) => ({
+          ...item,
+          variations: variationsByItem.get(item.id) || [],
+          addons: addonsByItem.get(item.id) || []
+        })) || []
     })) || [];
 
     // Fetch active coupon discounts
