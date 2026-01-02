@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/Layout';
 import { useRestaurants } from '@/hooks/useRestaurant';
 import { useRestaurantSettings, useUpdateRestaurantSettings } from '@/hooks/useRestaurantSettings';
+import { useRestaurantTaxes, useCreateRestaurantTax, useUpdateRestaurantTax, useDeleteRestaurantTax } from '@/hooks/useRestaurantTaxes';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Clock, Truck, Calculator } from 'lucide-react';
+import { Loader2, Clock, Truck, Calculator, Plus, Trash2, MessageSquare } from 'lucide-react';
 import { DeliveryZoneMap } from '@/components/DeliveryZoneMap';
 import type { OpeningHours, DayHours, DeliveryZone } from '@/types/database';
 
@@ -29,21 +30,28 @@ export default function StoreSettings() {
   const { data: restaurants, isLoading: loadingRestaurants } = useRestaurants();
   const restaurant = restaurants?.[0];
   const { data: settings, isLoading: loadingSettings } = useRestaurantSettings(restaurant?.id || '');
+  const { data: taxes } = useRestaurantTaxes(restaurant?.id || '');
   const updateSettings = useUpdateRestaurantSettings();
+  const createTax = useCreateRestaurantTax();
+  const updateTax = useUpdateRestaurantTax();
+  const deleteTax = useDeleteRestaurantTax();
   const { toast } = useToast();
 
-  const [openingHours, setOpeningHours] = useState<OpeningHours>(settings?.opening_hours || DEFAULT_HOURS);
-  const [pickupEnabled, setPickupEnabled] = useState(settings?.pickup_enabled ?? true);
-  const [deliveryEnabled, setDeliveryEnabled] = useState(settings?.delivery_enabled ?? false);
-  const [minOrderValue, setMinOrderValue] = useState(settings?.minimum_order_value ?? 0);
-  const [deliveryCharge, setDeliveryCharge] = useState(settings?.delivery_charge ?? 0);
-  const [prepTime, setPrepTime] = useState(settings?.preparation_time_minutes ?? 20);
-  const [taxIncluded, setTaxIncluded] = useState(settings?.tax_included_in_price ?? true);
-  const [taxRate, setTaxRate] = useState(settings?.tax_rate ?? 0);
-  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>(settings?.delivery_zones || []);
+  const [openingHours, setOpeningHours] = useState<OpeningHours>(DEFAULT_HOURS);
+  const [pickupEnabled, setPickupEnabled] = useState(true);
+  const [deliveryEnabled, setDeliveryEnabled] = useState(false);
+  const [minOrderValue, setMinOrderValue] = useState(0);
+  const [deliveryCharge, setDeliveryCharge] = useState(0);
+  const [prepTime, setPrepTime] = useState(20);
+  const [taxIncluded, setTaxIncluded] = useState(true);
+  const [deliveryZones, setDeliveryZones] = useState<DeliveryZone[]>([]);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(false);
+  const [whatsappPhone, setWhatsappPhone] = useState('');
+  const [newTaxName, setNewTaxName] = useState('');
+  const [newTaxRate, setNewTaxRate] = useState('');
 
   // Update state when settings load
-  useState(() => {
+  useEffect(() => {
     if (settings) {
       setOpeningHours(settings.opening_hours);
       setPickupEnabled(settings.pickup_enabled);
@@ -52,16 +60,55 @@ export default function StoreSettings() {
       setDeliveryCharge(settings.delivery_charge);
       setPrepTime(settings.preparation_time_minutes);
       setTaxIncluded(settings.tax_included_in_price);
-      setTaxRate(settings.tax_rate);
-      setDeliveryZones(settings.delivery_zones);
+      setDeliveryZones(settings.delivery_zones || []);
+      setWhatsappEnabled(settings.whatsapp_enabled || false);
+      setWhatsappPhone(settings.whatsapp_business_phone || '');
     }
-  });
+  }, [settings]);
 
   const handleDayChange = (day: keyof OpeningHours, field: keyof DayHours, value: string | boolean) => {
     setOpeningHours(prev => ({
       ...prev,
       [day]: { ...prev[day], [field]: value }
     }));
+  };
+
+  const handleAddTax = async () => {
+    if (!restaurant || !newTaxName.trim() || !newTaxRate) return;
+    
+    try {
+      await createTax.mutateAsync({
+        restaurant_id: restaurant.id,
+        name: newTaxName.trim(),
+        rate: parseFloat(newTaxRate) || 0,
+        is_active: true,
+        sort_order: (taxes?.length || 0),
+      });
+      setNewTaxName('');
+      setNewTaxRate('');
+      toast({ title: 'Tax added', description: `${newTaxName} has been added.` });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to add tax', variant: 'destructive' });
+    }
+  };
+
+  const handleDeleteTax = async (taxId: string) => {
+    if (!restaurant) return;
+    try {
+      await deleteTax.mutateAsync({ id: taxId, restaurant_id: restaurant.id });
+      toast({ title: 'Tax removed' });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to remove tax', variant: 'destructive' });
+    }
+  };
+
+  const handleToggleTax = async (taxId: string, isActive: boolean) => {
+    if (!restaurant) return;
+    try {
+      await updateTax.mutateAsync({ id: taxId, restaurant_id: restaurant.id, is_active: isActive });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to update tax', variant: 'destructive' });
+    }
   };
 
   const handleSave = async () => {
@@ -77,8 +124,9 @@ export default function StoreSettings() {
         delivery_charge: deliveryCharge,
         preparation_time_minutes: prepTime,
         tax_included_in_price: taxIncluded,
-        tax_rate: taxRate,
         delivery_zones: deliveryZones,
+        whatsapp_enabled: whatsappEnabled,
+        whatsapp_business_phone: whatsappPhone,
       });
       toast({ title: 'Settings saved', description: 'Your store settings have been updated.' });
     } catch (error: unknown) {
@@ -258,18 +306,101 @@ export default function StoreSettings() {
               <Switch checked={taxIncluded} onCheckedChange={setTaxIncluded} />
             </div>
 
-            <div className="max-w-xs">
-              <Label htmlFor="taxRate">Tax Rate (%)</Label>
-              <Input
-                id="taxRate"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                value={taxRate}
-                onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
-              />
+            <Separator />
+
+            {/* Named Taxes List */}
+            <div>
+              <Label className="text-sm font-semibold mb-3 block">Taxes</Label>
+              <div className="space-y-2 mb-4">
+                {taxes?.map((tax) => (
+                  <div key={tax.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={tax.is_active}
+                        onCheckedChange={(checked) => handleToggleTax(tax.id, checked)}
+                      />
+                      <span className={!tax.is_active ? 'text-muted-foreground' : ''}>{tax.name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">{tax.rate}%</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteTax(tax.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {(!taxes || taxes.length === 0) && (
+                  <p className="text-sm text-muted-foreground">No taxes configured yet.</p>
+                )}
+              </div>
+
+              {/* Add New Tax */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Tax name (e.g., GST)"
+                  value={newTaxName}
+                  onChange={(e) => setNewTaxName(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  type="number"
+                  placeholder="Rate %"
+                  value={newTaxRate}
+                  onChange={(e) => setNewTaxRate(e.target.value)}
+                  className="w-24"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                />
+                <Button onClick={handleAddTax} disabled={!newTaxName.trim() || !newTaxRate}>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </Button>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* WhatsApp Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              WhatsApp Notifications
+            </CardTitle>
+            <CardDescription>Send order updates to customers via WhatsApp</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Enable WhatsApp Notifications</Label>
+                <p className="text-sm text-muted-foreground">
+                  Notify customers when their order is accepted and ready
+                </p>
+              </div>
+              <Switch checked={whatsappEnabled} onCheckedChange={setWhatsappEnabled} />
+            </div>
+
+            {whatsappEnabled && (
+              <div>
+                <Label htmlFor="whatsappPhone">WhatsApp Business Phone (optional)</Label>
+                <Input
+                  id="whatsappPhone"
+                  type="tel"
+                  placeholder="+1234567890"
+                  value={whatsappPhone}
+                  onChange={(e) => setWhatsappPhone(e.target.value)}
+                  className="max-w-xs"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your WhatsApp Business number for sending notifications
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

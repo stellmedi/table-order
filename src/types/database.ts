@@ -40,6 +40,8 @@ export interface RestaurantSettings {
   preparation_time_minutes: number;
   tax_included_in_price: boolean;
   tax_rate: number;
+  whatsapp_enabled?: boolean;
+  whatsapp_business_phone?: string;
   created_at: string;
   updated_at: string;
 }
@@ -150,6 +152,13 @@ export interface Order {
   discount_applied: number;
   estimated_ready_at: string | null;
   customer_notified: boolean;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  order_type?: string;
+  delivery_address?: string | null;
+  delivery_fee?: number;
+  tax_amount?: number;
+  tax_breakdown?: { name: string; rate: number; amount: number }[];
   created_at: string;
   order_items?: OrderItem[];
 }
