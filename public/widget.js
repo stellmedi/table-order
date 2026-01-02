@@ -340,7 +340,7 @@
 
   // API calls
   const apiUrl = config.apiBase.includes('localhost') 
-    ? `http://localhost:54321/functions/v1`
+    ? `https://hannairmzwhlurkwydph.supabase.co/functions/v1`
     : `https://hannairmzwhlurkwydph.supabase.co/functions/v1`;
 
   async function fetchRestaurant() {
