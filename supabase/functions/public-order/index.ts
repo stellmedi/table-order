@@ -27,7 +27,16 @@ serve(async (req) => {
   }
 
   try {
-    const { restaurant_id, items, coupon_code, source = 'widget' } = await req.json();
+    const { 
+      restaurant_id, 
+      items, 
+      coupon_code,
+      customer_name,
+      customer_phone,
+      order_type = 'pickup',
+      delivery_address,
+      delivery_fee = 0,
+    } = await req.json();
 
     if (!restaurant_id || !items || !Array.isArray(items) || items.length === 0) {
       console.error('Invalid request body');
@@ -59,11 +68,25 @@ serve(async (req) => {
       );
     }
 
-    // Fetch menu items to calculate prices
+    // Fetch restaurant settings
+    const { data: settings } = await supabase
+      .from('restaurant_settings')
+      .select('tax_included_in_price')
+      .eq('restaurant_id', restaurant_id)
+      .single();
+
+    // Fetch restaurant taxes
+    const { data: taxes } = await supabase
+      .from('restaurant_taxes')
+      .select('id, name, rate')
+      .eq('restaurant_id', restaurant_id)
+      .eq('is_active', true);
+
+    // Fetch menu items with their menu's tax rate
     const itemIds = items.map((item: OrderItemRequest) => item.menu_item_id);
     const { data: menuItems, error: menuItemsError } = await supabase
       .from('menu_items')
-      .select('id, price, name')
+      .select('id, price, name, menu_id')
       .in('id', itemIds);
 
     if (menuItemsError) {
@@ -191,7 +214,25 @@ serve(async (req) => {
       }
     }
 
-    const total = Math.max(0, subtotal - discount);
+    const afterDiscount = subtotal - discount;
+
+    // Calculate taxes
+    let taxAmount = 0;
+    const taxBreakdown: { name: string; rate: number; amount: number }[] = [];
+    
+    if (taxes && taxes.length > 0 && !settings?.tax_included_in_price) {
+      taxes.forEach(tax => {
+        const amount = afterDiscount * (Number(tax.rate) / 100);
+        taxAmount += amount;
+        taxBreakdown.push({
+          name: tax.name,
+          rate: Number(tax.rate),
+          amount
+        });
+      });
+    }
+
+    const total = Math.max(0, afterDiscount + taxAmount + Number(delivery_fee));
 
     // Create order
     const { data: order, error: orderError } = await supabase
@@ -201,7 +242,14 @@ serve(async (req) => {
         status: 'new',
         total,
         discount_applied: discount,
-        coupon_code: coupon_code || null
+        coupon_code: coupon_code || null,
+        customer_name: customer_name || null,
+        customer_phone: customer_phone || null,
+        order_type,
+        delivery_address: delivery_address || null,
+        delivery_fee: Number(delivery_fee),
+        tax_amount: taxAmount,
+        tax_breakdown: taxBreakdown,
       })
       .select()
       .single();
@@ -280,6 +328,9 @@ serve(async (req) => {
         order_number: order.id.slice(0, 8).toUpperCase(),
         subtotal,
         discount,
+        tax_amount: taxAmount,
+        tax_breakdown: taxBreakdown,
+        delivery_fee: Number(delivery_fee),
         total,
         applied_discount: appliedDiscount ? appliedDiscount.name : null
       }),

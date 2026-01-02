@@ -354,34 +354,55 @@ export type Database = {
         Row: {
           coupon_code: string | null
           created_at: string
+          customer_name: string | null
           customer_notified: boolean | null
+          customer_phone: string | null
+          delivery_address: string | null
+          delivery_fee: number | null
           discount_applied: number | null
           estimated_ready_at: string | null
           id: string
+          order_type: string | null
           restaurant_id: string
           status: Database["public"]["Enums"]["order_status"]
+          tax_amount: number | null
+          tax_breakdown: Json | null
           total: number
         }
         Insert: {
           coupon_code?: string | null
           created_at?: string
+          customer_name?: string | null
           customer_notified?: boolean | null
+          customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
           discount_applied?: number | null
           estimated_ready_at?: string | null
           id?: string
+          order_type?: string | null
           restaurant_id: string
           status?: Database["public"]["Enums"]["order_status"]
+          tax_amount?: number | null
+          tax_breakdown?: Json | null
           total: number
         }
         Update: {
           coupon_code?: string | null
           created_at?: string
+          customer_name?: string | null
           customer_notified?: boolean | null
+          customer_phone?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
           discount_applied?: number | null
           estimated_ready_at?: string | null
           id?: string
+          order_type?: string | null
           restaurant_id?: string
           status?: Database["public"]["Enums"]["order_status"]
+          tax_amount?: number | null
+          tax_breakdown?: Json | null
           total?: number
         }
         Relationships: [
@@ -427,6 +448,8 @@ export type Database = {
           tax_included_in_price: boolean | null
           tax_rate: number | null
           updated_at: string | null
+          whatsapp_business_phone: string | null
+          whatsapp_enabled: boolean | null
         }
         Insert: {
           created_at?: string | null
@@ -442,6 +465,8 @@ export type Database = {
           tax_included_in_price?: boolean | null
           tax_rate?: number | null
           updated_at?: string | null
+          whatsapp_business_phone?: string | null
+          whatsapp_enabled?: boolean | null
         }
         Update: {
           created_at?: string | null
@@ -457,12 +482,52 @@ export type Database = {
           tax_included_in_price?: boolean | null
           tax_rate?: number | null
           updated_at?: string | null
+          whatsapp_business_phone?: string | null
+          whatsapp_enabled?: boolean | null
         }
         Relationships: [
           {
             foreignKeyName: "restaurant_settings_restaurant_id_fkey"
             columns: ["restaurant_id"]
             isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      restaurant_taxes: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          rate: number
+          restaurant_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          rate?: number
+          restaurant_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          rate?: number
+          restaurant_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_taxes_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
             referencedRelation: "restaurants"
             referencedColumns: ["id"]
           },

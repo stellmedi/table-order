@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,18 +9,22 @@ import {
   DialogTitle,
   DialogFooter 
 } from '@/components/ui/dialog';
-import { Clock, Check, ChefHat, Bell, Package } from 'lucide-react';
+import { Clock, Check, ChefHat, Bell, Package, Printer } from 'lucide-react';
+import { OrderReceipt } from '@/components/OrderReceipt';
 import type { Order, OrderStatus } from '@/types/database';
 
 interface OrderCardProps {
   order: Order;
+  restaurantName?: string;
   onUpdateStatus: (id: string, status: OrderStatus, estimatedMinutes?: number) => void;
 }
 
 const ESTIMATED_TIMES = [15, 20, 30, 45, 60];
 
-export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
+export function OrderCard({ order, restaurantName = 'Restaurant', onUpdateStatus }: OrderCardProps) {
   const [showTimeDialog, setShowTimeDialog] = useState(false);
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   const formatTime = (date: string) => {
     return new Date(date).toLocaleTimeString('en-US', {
@@ -55,6 +59,78 @@ export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
     });
   };
 
+  const handlePrint = () => {
+    setShowReceiptDialog(true);
+  };
+
+  const printReceipt = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow || !receiptRef.current) return;
+
+    const receiptHtml = receiptRef.current.innerHTML;
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Order Receipt</title>
+          <style>
+            body {
+              font-family: 'Courier New', monospace;
+              font-size: 12px;
+              margin: 0;
+              padding: 10px;
+              width: 80mm;
+            }
+            * { box-sizing: border-box; }
+            .text-center { text-align: center; }
+            .font-bold { font-weight: bold; }
+            .uppercase { text-transform: uppercase; }
+            .text-xl { font-size: 16px; }
+            .text-lg { font-size: 14px; }
+            .text-sm { font-size: 11px; }
+            .text-xs { font-size: 10px; }
+            .mb-1 { margin-bottom: 4px; }
+            .mb-2 { margin-bottom: 8px; }
+            .mb-3 { margin-bottom: 12px; }
+            .mt-1 { margin-top: 4px; }
+            .mt-2 { margin-top: 8px; }
+            .mt-4 { margin-top: 16px; }
+            .pt-2 { padding-top: 8px; }
+            .pt-3 { padding-top: 12px; }
+            .pb-3 { padding-bottom: 12px; }
+            .ml-3 { margin-left: 12px; }
+            .space-y-1 > * + * { margin-top: 4px; }
+            .space-y-2 > * + * { margin-top: 8px; }
+            .border-t { border-top: 1px solid #ccc; }
+            .border-b { border-bottom: 1px solid #ccc; }
+            .border-dashed { border-style: dashed; }
+            .flex { display: flex; }
+            .justify-between { justify-content: space-between; }
+            .text-gray-600 { color: #666; }
+            .text-gray-500 { color: #888; }
+            .text-green-700 { color: #15803d; }
+            @media print {
+              body { margin: 0; padding: 5px; }
+            }
+          </style>
+        </head>
+        <body>
+          ${receiptHtml}
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+    
+    setShowReceiptDialog(false);
+  };
+
   return (
     <>
       <Card className={`animate-scale-in ${order.status === 'new' ? 'ring-2 ring-warning animate-pulse' : ''}`}>
@@ -71,11 +147,24 @@ export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
               </span>
             </div>
           </div>
-          {order.estimated_ready_at && (
-            <Badge variant="outline" className="w-fit mt-2">
-              <Bell className="h-3 w-3 mr-1" />
-              Ready by {getEstimatedReadyTime()}
-            </Badge>
+          <div className="flex items-center gap-2 mt-2">
+            {order.estimated_ready_at && (
+              <Badge variant="outline">
+                <Bell className="h-3 w-3 mr-1" />
+                Ready by {getEstimatedReadyTime()}
+              </Badge>
+            )}
+            {order.order_type && (
+              <Badge variant="secondary" className="uppercase text-xs">
+                {order.order_type}
+              </Badge>
+            )}
+          </div>
+          {order.customer_name && (
+            <p className="text-sm mt-1">
+              <span className="font-medium">{order.customer_name}</span>
+              {order.customer_phone && <span className="text-muted-foreground"> • {order.customer_phone}</span>}
+            </p>
           )}
         </CardHeader>
         <CardContent>
@@ -110,9 +199,24 @@ export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
               )}
             </div>
           )}
+
+          {Number(order.tax_amount) > 0 && (
+            <div className="text-sm text-muted-foreground mb-2">
+              Tax: ${Number(order.tax_amount).toFixed(2)}
+            </div>
+          )}
+
+          {Number(order.delivery_fee) > 0 && (
+            <div className="text-sm text-muted-foreground mb-2">
+              Delivery: ${Number(order.delivery_fee).toFixed(2)}
+            </div>
+          )}
           
           <div className="flex items-center justify-between border-t border-border pt-3 mt-3">
             <span className="font-semibold text-lg">Total: ${Number(order.total).toFixed(2)}</span>
+            <Button variant="ghost" size="icon" onClick={handlePrint}>
+              <Printer className="h-4 w-4" />
+            </Button>
           </div>
 
           <div className="mt-4 flex gap-2">
@@ -150,6 +254,7 @@ export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
         </CardContent>
       </Card>
 
+      {/* Time Selection Dialog */}
       <Dialog open={showTimeDialog} onOpenChange={setShowTimeDialog}>
         <DialogContent>
           <DialogHeader>
@@ -170,6 +275,31 @@ export function OrderCard({ order, onUpdateStatus }: OrderCardProps) {
           <DialogFooter>
             <Button variant="ghost" onClick={() => setShowTimeDialog(false)}>
               Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Preview Dialog */}
+      <Dialog open={showReceiptDialog} onOpenChange={setShowReceiptDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Order Receipt</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <OrderReceipt 
+              ref={receiptRef} 
+              order={order} 
+              restaurantName={restaurantName} 
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReceiptDialog(false)}>
+              Close
+            </Button>
+            <Button onClick={printReceipt} className="gap-2">
+              <Printer className="h-4 w-4" />
+              Print
             </Button>
           </DialogFooter>
         </DialogContent>
