@@ -159,7 +159,7 @@ export function DeliveryZoneMap({ zones, onZonesChange }: DeliveryZoneMapProps) 
     });
   }, [zones, selectedZoneIndex]);
 
-  const updateZone = (index: number, field: keyof DeliveryZone, value: string | number) => {
+  const updateZone = (index: number, field: keyof DeliveryZone, value: string | number | string[]) => {
     const updated = [...zones];
     updated[index] = { ...updated[index], [field]: value };
     onZonesChange(updated);
@@ -233,7 +233,7 @@ export function DeliveryZoneMap({ zones, onZonesChange }: DeliveryZoneMapProps) 
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-0">
+              <CardContent className="pt-0 space-y-3">
                 <div className="flex gap-4">
                   <div className="flex items-center gap-2">
                     <Label className="text-sm text-muted-foreground whitespace-nowrap">Fee $</Label>
@@ -257,6 +257,19 @@ export function DeliveryZoneMap({ zones, onZonesChange }: DeliveryZoneMapProps) 
                       className="w-24 h-8"
                     />
                   </div>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Pin Codes (comma separated)</Label>
+                  <Input
+                    type="text"
+                    value={(zone.pin_codes || []).join(', ')}
+                    onChange={(e) => {
+                      const pins = e.target.value.split(',').map(p => p.trim()).filter(Boolean);
+                      updateZone(index, 'pin_codes', pins);
+                    }}
+                    placeholder="e.g., 10001, 10002, 10003"
+                    className="h-8 mt-1"
+                  />
                 </div>
               </CardContent>
             </Card>

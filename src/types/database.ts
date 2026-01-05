@@ -26,6 +26,7 @@ export interface DeliveryZone {
   fee: number;
   min_order: number;
   polygon?: [number, number][]; // Array of [lng, lat] coordinates
+  pin_codes?: string[]; // Pin codes that belong to this zone
 }
 
 export interface RestaurantSettings {

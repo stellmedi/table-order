@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PublicLayout } from '@/components/Layout';
 import { useRestaurantBySlug, usePublicMenus, usePublicDiscounts } from '@/hooks/useRestaurant';
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ItemOptionsModal } from '@/components/ItemOptionsModal';
+import { OrderReceipt } from '@/components/OrderReceipt';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   ChefHat, 
@@ -23,7 +24,9 @@ import {
   Check,
   Tag,
   Truck,
-  Store
+  Store,
+  UtensilsCrossed,
+  Download
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { CartItem, MenuItem, Discount, MenuItemVariation, MenuItemAddon, DeliveryZone } from '@/types/database';
@@ -46,9 +49,12 @@ export default function CustomerOrder() {
   // Customer info
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
-  const [orderType, setOrderType] = useState<'pickup' | 'delivery'>('pickup');
+  const [orderType, setOrderType] = useState<'dine-in' | 'pickup' | 'delivery'>('pickup');
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryPinCode, setDeliveryPinCode] = useState('');
   const [selectedZone, setSelectedZone] = useState<DeliveryZone | null>(null);
+  const [orderDetails, setOrderDetails] = useState<any>(null);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   // Item options modal
   const [optionsModal, setOptionsModal] = useState<{ open: boolean; item: MenuItem | null }>({
@@ -197,13 +203,91 @@ export default function CustomerOrder() {
 
   const totalTax = taxBreakdown.reduce((sum, t) => sum + t.amount, 0);
 
-  // Delivery fee
-  const deliveryFee = orderType === 'delivery' ? (selectedZone?.fee || settings?.delivery_charge || 0) : 0;
+  // Delivery fee with zone validation
+  const validatedZone = useMemo(() => {
+    if (orderType !== 'delivery' || !deliveryPinCode) return null;
+    const zones = settings?.delivery_zones || [];
+    return zones.find(z => z.pin_codes?.includes(deliveryPinCode)) || null;
+  }, [orderType, deliveryPinCode, settings?.delivery_zones]);
+
+  const deliveryFee = orderType === 'delivery' 
+    ? (validatedZone?.fee ?? selectedZone?.fee ?? settings?.delivery_charge ?? 0) 
+    : 0;
+
+  const isDeliveryValid = orderType !== 'delivery' || 
+    !settings?.delivery_zones?.some(z => z.pin_codes && z.pin_codes.length > 0) || 
+    validatedZone !== null;
 
   const total = afterDiscount + totalTax + deliveryFee;
 
+  const handleDownloadReceipt = () => {
+    if (!orderDetails) return;
+    
+    const receiptWindow = window.open('', '_blank');
+    if (!receiptWindow) return;
+    
+    const itemsHtml = cart.length > 0 ? cart.map(item => `
+      <tr>
+        <td style="padding: 8px 0;">${item.quantity}x ${item.menuItem.name}</td>
+        <td style="padding: 8px 0; text-align: right;">$${calculateItemPrice(item).toFixed(2)}</td>
+      </tr>
+    `).join('') : '';
+    
+    const taxHtml = taxBreakdown.map(tax => `
+      <tr>
+        <td style="padding: 4px 0; color: #666;">${tax.name} (${tax.rate}%)</td>
+        <td style="padding: 4px 0; text-align: right; color: #666;">$${tax.amount.toFixed(2)}</td>
+      </tr>
+    `).join('');
+    
+    receiptWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Order Receipt - ${restaurant?.name}</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; max-width: 400px; margin: 0 auto; }
+          h1 { font-size: 24px; margin-bottom: 8px; }
+          .meta { color: #666; font-size: 14px; margin-bottom: 24px; }
+          table { width: 100%; border-collapse: collapse; }
+          .total-row { font-weight: bold; font-size: 18px; border-top: 2px solid #333; }
+          .discount { color: #22c55e; }
+          @media print { button { display: none; } }
+        </style>
+      </head>
+      <body>
+        <h1>${restaurant?.name}</h1>
+        <p class="meta">
+          ${new Date().toLocaleString()}<br>
+          ${orderType === 'delivery' ? 'Delivery' : orderType === 'dine-in' ? 'Dine-in' : 'Pickup'}
+        </p>
+        
+        <table><tbody>${itemsHtml}</tbody></table>
+        
+        <hr style="margin: 16px 0; border: none; border-top: 1px solid #eee;">
+        
+        <table>
+          <tr><td>Subtotal</td><td style="text-align: right;">$${subtotal.toFixed(2)}</td></tr>
+          ${discount > 0 ? `<tr class="discount"><td>Discount</td><td style="text-align: right;">-$${discount.toFixed(2)}</td></tr>` : ''}
+          ${taxHtml}
+          ${deliveryFee > 0 ? `<tr><td>Delivery Fee</td><td style="text-align: right;">$${deliveryFee.toFixed(2)}</td></tr>` : ''}
+          <tr class="total-row"><td style="padding-top: 12px;">Total</td><td style="padding-top: 12px; text-align: right;">$${total.toFixed(2)}</td></tr>
+        </table>
+        
+        <p style="text-align: center; margin-top: 32px; color: #666; font-size: 14px;">Thank you for your order!</p>
+        <button onclick="window.print()" style="width: 100%; padding: 12px; margin-top: 20px; background: #333; color: white; border: none; border-radius: 8px; cursor: pointer;">Print Receipt</button>
+      </body>
+      </html>
+    `);
+    receiptWindow.document.close();
+  };
+
   const handlePlaceOrder = async () => {
     if (!restaurant || cart.length === 0) return;
+    if (!isDeliveryValid) {
+      toast({ title: 'Invalid delivery', description: 'Delivery not available for this pin code', variant: 'destructive' });
+      return;
+    }
 
     setIsPlacingOrder(true);
     
@@ -223,13 +307,14 @@ export default function CustomerOrder() {
           customer_name: customerName || undefined,
           customer_phone: customerPhone || undefined,
           order_type: orderType,
-          delivery_address: orderType === 'delivery' ? deliveryAddress : undefined,
+          delivery_address: orderType === 'delivery' ? `${deliveryAddress} - ${deliveryPinCode}` : undefined,
           delivery_fee: deliveryFee,
         },
       });
 
       if (error) throw error;
 
+      setOrderDetails(data);
       setOrderPlaced(true);
       setCart([]);
       setAppliedDiscount(null);
@@ -237,6 +322,7 @@ export default function CustomerOrder() {
       setCustomerName('');
       setCustomerPhone('');
       setDeliveryAddress('');
+      setDeliveryPinCode('');
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to place order';
       toast({ title: 'Error', description: message, variant: 'destructive' });
@@ -282,9 +368,15 @@ export default function CustomerOrder() {
           <p className="text-muted-foreground mb-8">
             {orderType === 'delivery' 
               ? 'Your order will be delivered to you soon.' 
+              : orderType === 'dine-in'
+              ? 'Your order will be served at your table.'
               : 'Please pay at the restaurant when you arrive.'}
           </p>
-          <div className="flex gap-4">
+          <div className="flex gap-4 flex-wrap justify-center">
+            <Button onClick={handleDownloadReceipt} variant="outline" className="gap-2">
+              <Download className="h-4 w-4" />
+              Download Receipt
+            </Button>
             <Button onClick={() => setOrderPlaced(false)}>Order Again</Button>
             <Link to={`/r/${slug}/book-table`}>
               <Button variant="outline" className="gap-2">
@@ -446,31 +538,37 @@ export default function CustomerOrder() {
 
                       <div className="border-t border-border mt-4 pt-4 space-y-4">
                         {/* Order Type */}
-                        {settings?.delivery_enabled && (
-                          <div>
-                            <Label className="text-sm font-medium mb-2 block">Order Type</Label>
-                            <RadioGroup 
-                              value={orderType} 
-                              onValueChange={(v) => setOrderType(v as 'pickup' | 'delivery')}
-                              className="flex gap-4"
-                            >
-                              {settings?.pickup_enabled && (
-                                <div className="flex items-center gap-2">
-                                  <RadioGroupItem value="pickup" id="pickup" />
-                                  <Label htmlFor="pickup" className="flex items-center gap-1 cursor-pointer">
-                                    <Store className="h-4 w-4" /> Pickup
-                                  </Label>
-                                </div>
-                              )}
+                        <div>
+                          <Label className="text-sm font-medium mb-2 block">Order Type</Label>
+                          <RadioGroup 
+                            value={orderType} 
+                            onValueChange={(v) => setOrderType(v as 'dine-in' | 'pickup' | 'delivery')}
+                            className="flex gap-4 flex-wrap"
+                          >
+                            <div className="flex items-center gap-2">
+                              <RadioGroupItem value="dine-in" id="dine-in" />
+                              <Label htmlFor="dine-in" className="flex items-center gap-1 cursor-pointer">
+                                <UtensilsCrossed className="h-4 w-4" /> Dine-in
+                              </Label>
+                            </div>
+                            {settings?.pickup_enabled !== false && (
+                              <div className="flex items-center gap-2">
+                                <RadioGroupItem value="pickup" id="pickup" />
+                                <Label htmlFor="pickup" className="flex items-center gap-1 cursor-pointer">
+                                  <Store className="h-4 w-4" /> Pickup
+                                </Label>
+                              </div>
+                            )}
+                            {settings?.delivery_enabled && (
                               <div className="flex items-center gap-2">
                                 <RadioGroupItem value="delivery" id="delivery" />
                                 <Label htmlFor="delivery" className="flex items-center gap-1 cursor-pointer">
                                   <Truck className="h-4 w-4" /> Delivery
                                 </Label>
                               </div>
-                            </RadioGroup>
-                          </div>
-                        )}
+                            )}
+                          </RadioGroup>
+                        </div>
 
                         {/* Customer Info */}
                         <div className="space-y-2">
@@ -486,11 +584,24 @@ export default function CustomerOrder() {
                             onChange={(e) => setCustomerPhone(e.target.value)}
                           />
                           {orderType === 'delivery' && (
-                            <Input
-                              placeholder="Delivery address"
-                              value={deliveryAddress}
-                              onChange={(e) => setDeliveryAddress(e.target.value)}
-                            />
+                            <>
+                              <Input
+                                placeholder="Delivery address"
+                                value={deliveryAddress}
+                                onChange={(e) => setDeliveryAddress(e.target.value)}
+                              />
+                              <Input
+                                placeholder="Pin code"
+                                value={deliveryPinCode}
+                                onChange={(e) => setDeliveryPinCode(e.target.value)}
+                              />
+                              {deliveryPinCode && !isDeliveryValid && (
+                                <p className="text-sm text-destructive">Delivery not available for this pin code</p>
+                              )}
+                              {validatedZone && (
+                                <p className="text-sm text-accent">Delivery to {validatedZone.name} - Fee: ${validatedZone.fee.toFixed(2)}</p>
+                              )}
+                            </>
                           )}
                         </div>
 
