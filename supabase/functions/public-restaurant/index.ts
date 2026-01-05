@@ -54,6 +54,41 @@ serve(async (req) => {
       );
     }
 
+    // Fetch restaurant settings
+    const { data: settings, error: settingsError } = await supabase
+      .from('restaurant_settings')
+      .select('*')
+      .eq('restaurant_id', restaurant.id)
+      .maybeSingle();
+
+    if (settingsError) {
+      console.error('Error fetching settings:', settingsError);
+    }
+
+    // Fetch restaurant taxes
+    const { data: taxes, error: taxesError } = await supabase
+      .from('restaurant_taxes')
+      .select('id, name, rate, is_active, sort_order')
+      .eq('restaurant_id', restaurant.id)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (taxesError) {
+      console.error('Error fetching taxes:', taxesError);
+    }
+
+    // Fetch tables for booking
+    const { data: tables, error: tablesError } = await supabase
+      .from('tables')
+      .select('id, name_or_number, capacity, is_active')
+      .eq('restaurant_id', restaurant.id)
+      .eq('is_active', true)
+      .order('name_or_number', { ascending: true });
+
+    if (tablesError) {
+      console.error('Error fetching tables:', tablesError);
+    }
+
     // Fetch menus with items, variations, and addons
     const { data: menus, error: menusError } = await supabase
       .from('menus')
@@ -148,7 +183,10 @@ serve(async (req) => {
       JSON.stringify({
         restaurant,
         menus: menusWithItems,
-        discounts: discounts || []
+        discounts: discounts || [],
+        settings: settings || null,
+        taxes: taxes || [],
+        tables: tables || []
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
