@@ -109,11 +109,40 @@ export function DeliveryZoneMap({ zones, onZonesChange }: DeliveryZoneMapProps) 
     });
     map.addControl(drawControl);
 
+    // Helper to calculate polygon centroid
+    const getPolygonCentroid = (polygon: [number, number][]) => {
+      const n = polygon.length;
+      let cx = 0, cy = 0;
+      polygon.forEach(([lng, lat]) => {
+        cx += lng;
+        cy += lat;
+      });
+      return [cx / n, cy / n];
+    };
+
+    // Reverse geocode to get pin code
+    const fetchPinCode = async (lat: number, lng: number): Promise<string | null> => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18`,
+          { headers: { 'User-Agent': 'RestaurantWidget/1.0' } }
+        );
+        const data = await response.json();
+        return data.address?.postcode || null;
+      } catch {
+        return null;
+      }
+    };
+
     // Handle new polygon creation
-    map.on(L.Draw.Event.CREATED, (e: any) => {
+    map.on(L.Draw.Event.CREATED, async (e: any) => {
       const layer = e.layer;
       const latlngs = layer.getLatLngs()[0] as L.LatLng[];
       const polygon = latlngs.map((ll: L.LatLng) => [ll.lng, ll.lat] as [number, number]);
+      
+      // Calculate centroid and fetch pin code
+      const [lng, lat] = getPolygonCentroid(polygon);
+      const pinCode = await fetchPinCode(lat, lng);
       
       const currentZones = zonesRef.current;
       const newZone: DeliveryZone = {
@@ -121,6 +150,7 @@ export function DeliveryZoneMap({ zones, onZonesChange }: DeliveryZoneMapProps) 
         fee: 0,
         min_order: 0,
         polygon,
+        pin_codes: pinCode ? [pinCode] : [],
       };
       
       layer.options.color = ZONE_COLORS[currentZones.length % ZONE_COLORS.length];
