@@ -443,6 +443,23 @@
       margin-bottom: 12px;
       font-size: 13px;
     }
+    /* Customer Toggle */
+    .tf-widget-customer-toggle {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      background: #f5f5f5;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .tf-widget-customer-toggle:hover {
+      background: #eee;
+    }
     /* Booking Form */
     .tf-widget-booking-form {
       display: flex;
@@ -508,6 +525,7 @@
   let deliveryAddress = '';
   let deliveryPinCode = '';
   let selectedZone = null;
+  let customerInfoExpanded = false; // Collapsible customer details
   // Booking form state
   let bookingTableId = '';
   let bookingDate = '';
@@ -1066,9 +1084,14 @@
     }
     orderTypeHtml += '</div>';
 
-    // Customer info and delivery address
+    // Customer info and delivery address (collapsible)
+    const hasCustomerInfo = customerName || customerPhone || deliveryAddress || deliveryPinCode;
     let customerHtml = `
-      <div class="tf-widget-customer-info">
+      <div class="tf-widget-customer-toggle" id="tf-customer-toggle">
+        <span>Customer Details ${hasCustomerInfo ? '(filled)' : ''}</span>
+        <span style="transition: transform 0.2s; display: inline-block; ${customerInfoExpanded ? 'transform: rotate(180deg);' : ''}"">▼</span>
+      </div>
+      <div class="tf-widget-customer-info" style="${customerInfoExpanded ? '' : 'display: none;'}">
         <input type="text" class="tf-widget-input" id="tf-customer-name" placeholder="Your name" value="${customerName}">
         <input type="tel" class="tf-widget-input" id="tf-customer-phone" placeholder="Phone number" value="${customerPhone}">
     `;
@@ -1299,6 +1322,12 @@
       });
     });
 
+    // Customer toggle
+    modal.querySelector('#tf-customer-toggle')?.addEventListener('click', () => {
+      customerInfoExpanded = !customerInfoExpanded;
+      render();
+    });
+
     // Customer info inputs
     modal.querySelector('#tf-customer-name')?.addEventListener('input', (e) => {
       customerName = e.target.value;
@@ -1310,9 +1339,9 @@
       deliveryAddress = e.target.value;
     });
     const debouncedValidateAndRender = debounce(() => {
-  validateDeliveryZone();
-  render();
-}, 600)
+      validateDeliveryZone();
+      render();
+    }, 600);
     modal.querySelector('#tf-delivery-pincode')?.addEventListener('input', (e) => {
       deliveryPinCode = e.target.value;
       debouncedValidateAndRender();
