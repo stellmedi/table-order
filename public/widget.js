@@ -845,6 +845,14 @@
     receiptWindow.document.close();
   }
 
+  function debounce(fn, delay = 800) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
   function render() {
     if (isLoading) {
       modal.innerHTML = `
@@ -1079,6 +1087,7 @@
     }
     customerHtml += '</div>';
 
+
     // Tax breakdown
     let taxHtml = '';
     taxBreakdown.forEach(tax => {
@@ -1300,10 +1309,13 @@
     modal.querySelector('#tf-delivery-address')?.addEventListener('input', (e) => {
       deliveryAddress = e.target.value;
     });
+    const debouncedValidateAndRender = debounce(() => {
+  validateDeliveryZone();
+  render();
+}, 600)
     modal.querySelector('#tf-delivery-pincode')?.addEventListener('input', (e) => {
       deliveryPinCode = e.target.value;
-      validateDeliveryZone();
-      render();
+      debouncedValidateAndRender();
     });
 
     // Coupon
