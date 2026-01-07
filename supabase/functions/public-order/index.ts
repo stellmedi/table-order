@@ -86,7 +86,7 @@ serve(async (req) => {
     const itemIds = items.map((item: OrderItemRequest) => item.menu_item_id);
     const { data: menuItems, error: menuItemsError } = await supabase
       .from('menu_items')
-      .select('id, price, name, menu_id')
+      .select('id, price, name, menu_id, menus!inner(id, tax_rate)')
       .in('id', itemIds);
 
     if (menuItemsError) {
@@ -130,9 +130,10 @@ serve(async (req) => {
       addons?.forEach(a => addonsMap.set(a.id, a));
     }
 
-    // Calculate subtotal
+    // Calculate subtotal and track items by menu for category-level taxes
     const menuItemMap = new Map(menuItems?.map(mi => [mi.id, mi]) || []);
     let subtotal = 0;
+    const menuTotals = new Map<string, { name: string; taxRate: number; total: number }>();
     
     const orderItemsData: any[] = [];
     const orderItemVariations: any[] = [];
@@ -184,6 +185,16 @@ serve(async (req) => {
       const totalItemPrice = (itemPrice + addonsTotal) * item.quantity;
       subtotal += totalItemPrice;
 
+      // Track totals by menu for category-level tax calculation
+      const menu = (menuItem as any).menus;
+      if (menu && menu.tax_rate && Number(menu.tax_rate) > 0) {
+        const menuId = menu.id;
+        if (!menuTotals.has(menuId)) {
+          menuTotals.set(menuId, { name: menu.name || 'Category', taxRate: Number(menu.tax_rate), total: 0 });
+        }
+        menuTotals.get(menuId)!.total += totalItemPrice;
+      }
+
       orderItemsData.push({
         menu_item_id: item.menu_item_id,
         quantity: item.quantity,
@@ -216,10 +227,25 @@ serve(async (req) => {
 
     const afterDiscount = subtotal - discount;
 
-    // Calculate taxes
+    // Calculate taxes (category-level + restaurant-level)
     let taxAmount = 0;
     const taxBreakdown: { name: string; rate: number; amount: number }[] = [];
     
+    // 1. Category-level taxes (from menu.tax_rate)
+    menuTotals.forEach(({ name, taxRate, total }) => {
+      // Apply discount proportionally to this menu's items
+      const discountRatio = subtotal > 0 ? total / subtotal : 0;
+      const menuAfterDiscount = total - (discount * discountRatio);
+      const amount = menuAfterDiscount * (taxRate / 100);
+      taxAmount += amount;
+      taxBreakdown.push({
+        name: `${name} Tax`,
+        rate: taxRate,
+        amount
+      });
+    });
+    
+    // 2. Restaurant-level taxes (applied to after-discount total, if not included in price)
     if (taxes && taxes.length > 0 && !settings?.tax_included_in_price) {
       taxes.forEach(tax => {
         const amount = afterDiscount * (Number(tax.rate) / 100);

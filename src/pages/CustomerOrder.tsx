@@ -189,17 +189,50 @@ export default function CustomerOrder() {
   const discount = calculateDiscount();
   const afterDiscount = subtotal - discount;
 
-  // Calculate taxes
+  // Calculate taxes (category-level + restaurant-level)
   const taxBreakdown = useMemo(() => {
-    if (!taxes || taxes.length === 0 || settings?.tax_included_in_price) {
-      return [];
+    const breakdown: { name: string; rate: number; amount: number }[] = [];
+    
+    // 1. Category-level taxes (from menu.tax_rate)
+    menus?.forEach(menu => {
+      if (menu.tax_rate && Number(menu.tax_rate) > 0) {
+        let menuItemsTotal = 0;
+        
+        cart.forEach(cartItem => {
+          const menuItem = menu.menu_items?.find(i => i.id === cartItem.menuItem.id);
+          if (menuItem) {
+            menuItemsTotal += calculateItemPrice(cartItem);
+          }
+        });
+        
+        if (menuItemsTotal > 0) {
+          // Apply discount proportionally
+          const discountRatio = subtotal > 0 ? menuItemsTotal / subtotal : 0;
+          const menuDiscount = discount * discountRatio;
+          const menuAfterDiscount = menuItemsTotal - menuDiscount;
+          const taxAmount = menuAfterDiscount * (Number(menu.tax_rate) / 100);
+          breakdown.push({
+            name: `${menu.name} Tax`,
+            rate: Number(menu.tax_rate),
+            amount: taxAmount
+          });
+        }
+      }
+    });
+    
+    // 2. Restaurant-level taxes (if not included in price)
+    if (taxes && taxes.length > 0 && !settings?.tax_included_in_price) {
+      taxes.forEach(tax => {
+        breakdown.push({
+          name: tax.name,
+          rate: Number(tax.rate),
+          amount: afterDiscount * (Number(tax.rate) / 100)
+        });
+      });
     }
-    return taxes.map(tax => ({
-      name: tax.name,
-      rate: Number(tax.rate),
-      amount: afterDiscount * (Number(tax.rate) / 100),
-    }));
-  }, [taxes, afterDiscount, settings?.tax_included_in_price]);
+    
+    return breakdown;
+  }, [menus, cart, taxes, subtotal, discount, afterDiscount, settings?.tax_included_in_price]);
 
   const totalTax = taxBreakdown.reduce((sum, t) => sum + t.amount, 0);
 
