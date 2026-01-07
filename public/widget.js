@@ -715,13 +715,57 @@
     return Math.min(parseFloat(discount.value), subtotal);
   }
 
-  function calculateTaxes(afterDiscount) {
-    if (!taxes || taxes.length === 0 || settings?.tax_included_in_price) return [];
-    return taxes.map(tax => ({
-      name: tax.name,
-      rate: parseFloat(tax.rate),
-      amount: afterDiscount * (parseFloat(tax.rate) / 100)
-    }));
+  function calculateTaxes(afterDiscount, subtotal) {
+    const breakdown = [];
+    
+    // 1. Category-level taxes (from menu.tax_rate)
+    menus.forEach(menu => {
+      if (menu.tax_rate && parseFloat(menu.tax_rate) > 0) {
+        let menuItemsTotal = 0;
+        
+        // Simple cart items
+        (menu.menu_items || []).forEach(item => {
+          if (cart[item.id]) {
+            menuItemsTotal += parseFloat(item.price) * cart[item.id];
+          }
+        });
+        
+        // Items with variations/addons
+        cartItems.forEach(cartItem => {
+          const menuItem = (menu.menu_items || []).find(i => i.id === cartItem.menu_item_id);
+          if (menuItem) {
+            menuItemsTotal += cartItem.total * cartItem.quantity;
+          }
+        });
+        
+        if (menuItemsTotal > 0) {
+          // Apply discount proportionally
+          const discountRatio = subtotal > 0 ? menuItemsTotal / subtotal : 0;
+          const menuDiscount = (subtotal - afterDiscount) * discountRatio;
+          const menuAfterDiscount = menuItemsTotal - menuDiscount;
+          const taxAmount = menuAfterDiscount * (parseFloat(menu.tax_rate) / 100);
+          breakdown.push({
+            name: `${menu.name} Tax`,
+            rate: parseFloat(menu.tax_rate),
+            amount: taxAmount
+          });
+        }
+      }
+    });
+    
+    // 2. Restaurant-level taxes (if tax not included in price)
+    if (taxes && taxes.length > 0 && !settings?.tax_included_in_price) {
+      taxes.forEach(tax => {
+        const taxAmount = afterDiscount * (parseFloat(tax.rate) / 100);
+        breakdown.push({
+          name: tax.name,
+          rate: parseFloat(tax.rate),
+          amount: taxAmount
+        });
+      });
+    }
+    
+    return breakdown;
   }
 
   function getDeliveryFee() {
@@ -990,7 +1034,7 @@
     const subtotal = getCartTotal();
     const discount = calculateDiscount(subtotal);
     const afterDiscount = Math.max(0, subtotal - discount);
-    const taxBreakdown = calculateTaxes(afterDiscount);
+    const taxBreakdown = calculateTaxes(afterDiscount, subtotal);
     const totalTax = taxBreakdown.reduce((sum, t) => sum + t.amount, 0);
     const deliveryFee = getDeliveryFee();
     const total = afterDiscount + totalTax + deliveryFee;

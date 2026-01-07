@@ -93,7 +93,7 @@ serve(async (req) => {
     const { data: menus, error: menusError } = await supabase
       .from('menus')
       .select(`
-        id, name, is_active,
+        id, name, is_active, tax_rate,
         menu_items (
           id, name, price, is_available
         )
@@ -155,7 +155,10 @@ serve(async (req) => {
 
     // Filter to only available items and attach variations/addons
     const menusWithItems = menus?.map(menu => ({
-      ...menu,
+      id: menu.id,
+      name: menu.name,
+      is_active: menu.is_active,
+      tax_rate: menu.tax_rate,
       menu_items: menu.menu_items
         ?.filter((item: any) => item.is_available)
         .map((item: any) => ({
